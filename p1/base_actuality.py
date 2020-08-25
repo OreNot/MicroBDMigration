@@ -12,6 +12,10 @@ orderBaseFile = 'C:\\microservices\\order_base.xlsm'
 dlWithoutGen23BaseFile = 'C:\\microservices\\dl_without_gen23.xlsx'
 organizations = []
 dls = []
+db_config = {'dbname':'OKZ_DB',
+           'user':'root',
+           'password':'test',
+           'host':'localhost',}
 
 
 
@@ -184,15 +188,12 @@ def readOrderBase():
     wb = load_workbook(orderBaseFile, data_only=True)
 
     ws = wb['Договоры']
-    j = 1
     for i in range (1, ws.max_row):
         cell = ws["A" + str(i)]
         if "ID документа" in str(cell.value):
+            j += i
             break
-        else:
-            j += 1
-
-    j += 1
+ 
 
     for row in range(j, ws.max_row):
 
@@ -291,8 +292,7 @@ def fetchOrgDB():
 
     for i in organizations:
 
-        conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                password='postgres', host='localhost')
+        conn = psycopg2.connect(**db_config)
         cursor = conn.cursor()
 
         cursor.execute('SELECT * FROM administrators_organizations WHERE docid = \'{1}\' AND gid = \'{0}\''.format(
@@ -307,8 +307,7 @@ def fetchOrgDB():
         conn.close()
 
         if len(records) == 0:
-            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                    password='postgres', host='localhost')
+            conn = psycopg2.connect(**db_config)
             cursor = conn.cursor()
 
             cursor.execute('SELECT id FROM administrators_orderstatuses WHERE '
@@ -321,8 +320,7 @@ def fetchOrgDB():
 
             idorderstatus = re.sub("[^0-9]", "", str(records[0]))
 
-            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                    password='postgres', host='localhost')
+            conn = psycopg2.connect(**db_config)
             cursor = conn.cursor()
 
             cursor.execute('SELECT id FROM administrators_orderactivities WHERE '
@@ -340,8 +338,7 @@ def fetchOrgDB():
                 idorderactivity = 1
 
             try:
-                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                        password='postgres', host='localhost')
+                conn = psycopg2.connect(**db_config)
                 cursor = conn.cursor()
 
                 sql = 'INSERT INTO public.administrators_organizations(id, docid, gid, inn, full_organization_name, organization_name, services, doc_num, doc_date, order_start_date, order_end_date, document_price, document_price_with_nds, doc_prepare_date, doc_eosdo_date, doc_sending_date, order_activity_date, doc_eosdo_num, doc_eosdo_link, order_activity_id, order_status_id) VALUES ({0}, \'{1}\', \'{2}\', \'{3}\', \'{4}\', \'{5}\', \'{6}\', \'{7}\', \'{8}\', \'{9}\', \'{10}\', \'{11}\', \'{12}\', \'{13}\', \'{14}\', \'{15}\', \'{16}\', \'{17}\', \'{18}\', {19}, {20})'.format(
@@ -394,8 +391,7 @@ def fetchDlDB():
 
 
         if str(i.get_gid()) != "None":
-            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                    password='postgres', host='localhost')
+            conn = psycopg2.connect(**db_config)
             cursor = conn.cursor()
 
             cursor.execute(
@@ -412,8 +408,7 @@ def fetchDlDB():
 
 
             if len(adminRrecords) == 0:
-                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                        password='postgres', host='localhost')
+                conn = psycopg2.connect(**db_config)
                 cursor = conn.cursor()
 
                 cursor.execute('SELECT id FROM administrators_dlnames WHERE '
@@ -430,8 +425,7 @@ def fetchDlDB():
                 except IndexError as error:
                     dl_name_id = 1
 
-                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                        password='postgres', host='localhost')
+                conn = psycopg2.connect(**db_config)
                 cursor = conn.cursor()
 
                 cursor.execute('SELECT id FROM administrators_organizations WHERE '
@@ -445,8 +439,7 @@ def fetchDlDB():
                 for record in records:
 
                     try:
-                        conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                                password='postgres', host='localhost')
+                        conn = psycopg2.connect(**db_config)
                         cursor = conn.cursor()
 
                         cursor.execute(
@@ -461,8 +454,7 @@ def fetchDlDB():
                         cursor.close()
                         conn.close()
                         if len(adminRrecords) == 0:
-                            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                                    password='postgres', host='localhost')
+                            conn = psycopg2.connect(**db_config)
                             cursor = conn.cursor()
 
 
@@ -501,8 +493,7 @@ def fetchDlDB():
 
                         try:
 
-                            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                                    password='postgres', host='localhost')
+                            conn = psycopg2.connect(**db_config)
                             cursor = conn.cursor()
                             sql = 'SELECT * FROM administrators_order_admin_ib WHERE order_num = \'{0}\' AND order_date = \'{1}\''.format(
                                 i.get_order_num(),
@@ -515,8 +506,7 @@ def fetchDlDB():
                             orderRrecords = cursor.fetchall()
 
                             if len(orderRrecords) == 0:
-                                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                                        password='postgres', host='localhost')
+                                conn = psycopg2.connect(**db_config)
                                 cursor = conn.cursor()
 
                                 sql = 'INSERT INTO public.administrators_order_admin_ib(id, order_num, order_date, order_file, order_administrator_id, order_organization_id) VALUES ({0}, \'{1}\', \'{2}\', \'{3}\', {4}, {5})'.format(
@@ -571,8 +561,7 @@ def fethDicts():
                 continue
 
 
-    conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                            password='postgres', host='localhost')
+    conn = psycopg2.connect(**db_config)
     cursor = conn.cursor()
 
     sql = 'SELECT * FROM administrators_orderactivities WHERE activity_name = \'{0}\''.format(
@@ -596,8 +585,7 @@ def fethDicts():
     for orderActivity in orderActivities:
         try:
 
-            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                    password='postgres', host='localhost')
+            conn = psycopg2.connect(**db_config)
             cursor = conn.cursor()
             sql = 'SELECT * FROM administrators_orderactivities WHERE activity_name = \'{0}\''.format(
                 orderActivity
@@ -630,8 +618,7 @@ def fethDicts():
             conn.close()
             print("Success")
 
-    conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                            password='postgres', host='localhost')
+    conn = psycopg2.connect(**db_config)
     cursor = conn.cursor()
     sql = 'INSERT INTO public.administrators_orderstatuses(id, status_name) VALUES (1, \'Не указан\')'
 
@@ -644,8 +631,7 @@ def fethDicts():
         try:
 
 
-            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                    password='postgres', host='localhost')
+            conn = psycopg2.connect(**db_config)
             cursor = conn.cursor()
             sql = 'SELECT * FROM administrators_orderstatuses WHERE status_name = \'{0}\''.format(
                 orderStatus
@@ -689,8 +675,7 @@ def fethDicts():
     for dl in dlList:
         try:
 
-            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                        password='postgres', host='localhost')
+            conn = psycopg2.connect(**db_config)
             cursor = conn.cursor()
             sql = 'SELECT * FROM administrators_dlnames WHERE dl_name = \'{0}\''.format(
                    dl
