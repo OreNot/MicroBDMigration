@@ -1,12 +1,9 @@
-import codecs
-import time
-import xlrd
+
 from openpyxl import load_workbook
-import pandas
+
 import psycopg2
 import re
 
-import files as files
 
 orderBaseFile = 'C:\\microservices\\order_base.xlsm'
 dlWithoutGen23BaseFile = 'C:\\microservices\\dl_without_gen23.xlsx'
@@ -197,57 +194,57 @@ def readOrderBase():
     for row in range(j, ws.max_row):
 
         docid = ws["A" + str(row)].value
-        gid = ws["E" + str(row)].value
-        inn = ws["F" + str(row)].value
-        full_organization_name = ws["H" + str(row)].value
-        organization_name = ws["I" + str(row)].value
-        services = ws["P" + str(row)].value
-        doc_num = ws["K" + str(row)].value
+        gid = ws["F" + str(row)].value
+        inn = ws["G" + str(row)].value
+        full_organization_name = ws["I" + str(row)].value
+        organization_name = ws["J" + str(row)].value
+        services = ws["Q" + str(row)].value
+        doc_num = ws["L" + str(row)].value
 
-        if str(ws["L" + str(row)].value) == "None" or re.search('[а-яА-Я]', str(ws["L" + str(row)].value)):
+        if str(ws["M" + str(row)].value) == "None" or isinstance(ws["M" + str(row)].value, str):
             doc_date = '2030-01-01 00:00:00'
         else:
-            doc_date = ws["L" + str(row)].value
+            doc_date = ws["M" + str(row)].value
 
 
-        if str(ws["Q" + str(row)].value) == "None" or isinstance(ws["Q" + str(row)].value, str):
+        if str(ws["R" + str(row)].value) == "None" or isinstance(ws["R" + str(row)].value, str):
             order_start_date = '2030-01-01 00:00:00'
         else:
-            order_start_date = ws["Q" + str(row)].value
+            order_start_date = ws["R" + str(row)].value
 
-        if str(ws["R" + str(row)].value) == "None" or isinstance(ws["Q" + str(row)].value, str):
+        if str(ws["S" + str(row)].value) == "None" or isinstance(ws["S" + str(row)].value, str):
             order_end_date = '2030-01-01 00:00:00'
         else:
-            order_end_date = ws["R" + str(row)].value
+            order_end_date = ws["S" + str(row)].value
 
-        order_status = ws["T" + str(row)].value
-        order_activity = ws["U" + str(row)].value
-        document_price = ws["AC" + str(row)].value
-        document_price_with_nds = ws["AD" + str(row)].value
-        if str(ws["AF" + str(row)].value) == "None" or isinstance(ws["Q" + str(row)].value, str):
+        order_status = ws["U" + str(row)].value
+        order_activity = ws["V" + str(row)].value
+        document_price = ws["AD" + str(row)].value
+        document_price_with_nds = ws["AE" + str(row)].value
+        if str(ws["AG" + str(row)].value) == "None" or isinstance(ws["AG" + str(row)].value, str):
             doc_prepare_date = '2030-01-01 00:00:00'
         else:
-            doc_prepare_date = ws["AF" + str(row)].value
+            doc_prepare_date = ws["AG" + str(row)].value
 
-        if str(ws["AG" + str(row)].value) == "None" or isinstance(ws["Q" + str(row)].value, str):
+        if str(ws["AH" + str(row)].value) == "None" or isinstance(ws["AH" + str(row)].value, str):
             doc_eosdo_date = '2030-01-01 00:00:00'
         else:
-            doc_eosdo_date = ws["AG" + str(row)].value
+            doc_eosdo_date = ws["AH" + str(row)].value
 
-        if str(ws["AH" + str(row)].value) == "None" or isinstance(ws["Q" + str(row)].value, str):
+        if str(ws["AI" + str(row)].value) == "None" or isinstance(ws["AI" + str(row)].value, str):
             doc_sending_date = '2030-01-01 00:00:00'
         else:
-            doc_sending_date = ws["AH" + str(row)].value
+            doc_sending_date = ws["AI" + str(row)].value
 
-        if str(ws["AI" + str(row)].value) == "None" or isinstance(ws["Q" + str(row)].value, str):
+        if str(ws["AI" + str(row)].value) == "None" or isinstance(ws["AI" + str(row)].value, str):
             order_activity_date = '2030-01-01 00:00:00'
         else:
             order_activity_date = ws["AI" + str(row)].value
-        doc_eosdo_num = ws["AN" + str(row)].value
+        doc_eosdo_num = ws["AO" + str(row)].value
         try:
-            doc_eosdo_link = ws["AO" + str(row)].hyperlink.target
+            doc_eosdo_link = ws["AP" + str(row)].hyperlink.target
         except AttributeError:
-            oc_eosdo_link = ""
+            doc_eosdo_link = ""
 
         newOrganization = Organization(docid, gid, inn, full_organization_name, organization_name, services, doc_num, doc_date, order_start_date,
                  order_end_date,
@@ -287,7 +284,7 @@ def readDlBase():
                 dls.append(newDl)
 
 def fetchOrgDB():
-    id = 1
+
 
     for i in organizations:
 
@@ -295,18 +292,116 @@ def fetchOrgDB():
                                 password='postgres', host='localhost')
         cursor = conn.cursor()
 
-        cursor.execute('SELECT * FROM administrators_organizations WHERE docid = \'{1}\' AND gid = \'{0}\''.format(
+        cursor.execute('SELECT * FROM administrators_organizations WHERE docid = \'{1}\' AND gid = \'{0}\' AND inn = \'{2}\''.format(
             i.get_gid(),
-            i.get_docid()
+            i.get_docid(),
+            i.get_inn()
         ))
         conn.commit()
 
-        records = cursor.fetchall()
+        orgRecords = cursor.fetchall()
 
         cursor.close()
         conn.close()
 
-        if len(records) == 0:
+        if len(orgRecords) == 0:
+
+
+            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
+                                    password='postgres', host='localhost')
+            cursor = conn.cursor()
+
+            cursor.execute('SELECT id FROM administrators_orderstatuses WHERE '
+                           'status_name = \'{0}\''.format(i.get_order_status()))
+            conn.commit()
+
+            records = cursor.fetchall()
+            cursor.close()
+            conn.close()
+
+            idorderstatus = re.sub("[^0-9]", "", str(records[0]))
+
+            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
+                                    password='postgres', host='localhost')
+            cursor = conn.cursor()
+
+            cursor.execute('SELECT id FROM administrators_orderactivities WHERE '
+                           'activity_name = \'{0}\''.format(i.get_order_activity()))
+
+            records = cursor.fetchall()
+            conn.commit()
+
+            cursor.close()
+            conn.close()
+
+            try:
+                idorderactivity = re.sub("[^0-9]", "", str(records[0]))
+            except IndexError as error:
+                idorderactivity = 1
+
+            try:
+                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
+                                        password='postgres', host='localhost')
+                cursor = conn.cursor()
+                sql = 'SELECT MAX(id) FROM administrators_organizations'
+
+
+                cursor.execute(sql)
+                conn.commit()
+
+
+
+                sql = 'SELECT MAX(id) FROM administrators_organizations'
+
+                try:
+                    cursor.execute(sql)
+                    conn.commit()
+
+                    lastId = cursor.fetchall()
+                    lastId = int(re.sub("[^0-9]", "", str(lastId)))
+                    lastId += 1
+                except Exception as e:
+                    lastId = 1
+
+                sql = 'INSERT INTO public.administrators_organizations(id, docid, gid, inn, full_organization_name, organization_name, services, doc_num, doc_date, order_start_date, order_end_date, document_price, document_price_with_nds, doc_prepare_date, doc_eosdo_date, doc_sending_date, order_activity_date, doc_eosdo_num, doc_eosdo_link, order_activity_id, order_status_id) VALUES ({0}, \'{1}\', \'{2}\', \'{3}\', \'{4}\', \'{5}\', \'{6}\', \'{7}\', \'{8}\', \'{9}\', \'{10}\', \'{11}\', \'{12}\', \'{13}\', \'{14}\', \'{15}\', \'{16}\', \'{17}\', \'{18}\', {19}, {20})'.format(
+                    lastId,
+                    i.get_docid(),
+                    i.get_gid(),
+                    i.get_inn(),
+                    i.get_full_organization_name(),
+                    i.get_organization_name(),
+                    i.get_services(),
+                    i.get_doc_num(),
+                    i.get_doc_date(),
+                    i.get_order_start_date(),
+                    i.get_order_end_date(),
+                    i.get_document_price(),
+                    i.get_document_price_with_nds(),
+                    i.get_doc_prepare_date(),
+                    i.get_doc_eosdo_date(),
+                    i.get_doc_sending_date(),
+                    i.get_order_activity_date(),
+                    i.get_doc_eosdo_num(),
+                    i.get_doc_eosdo_link(),
+                    idorderactivity,
+                    idorderstatus
+                )
+
+                print(sql)
+
+                cursor.execute(sql)
+                conn.commit()
+
+                cursor.close()
+
+            except Exception as error:
+                print("Failed to insert record into Laptop table {}".format(error))
+
+            finally:
+                conn.close()
+                print("MySQL connection is closed")
+
+        else:
             conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
                                     password='postgres', host='localhost')
             cursor = conn.cursor()
@@ -344,8 +439,33 @@ def fetchOrgDB():
                                         password='postgres', host='localhost')
                 cursor = conn.cursor()
 
+                orgId = orgRecords[0][0]
+
+                sql = 'DELETE FROM administrators_order_admin_ib WHERE 	order_organization_id = {0}'.format(
+                    orgId)
+                print(sql)
+                try:
+                    cursor.execute(sql)
+                    conn.commit()
+
+
+                except Exception as e:
+                    print("Failed to insert record into Laptop table {}".format(error))
+
+                sql = 'DELETE FROM administrators_organizations WHERE id = {0}'.format(orgId)
+                print(sql)
+                try:
+                    cursor.execute(sql)
+                    conn.commit()
+
+
+                except Exception as e:
+                    print("Failed to insert record into Laptop table {}".format(error))
+
+
+
                 sql = 'INSERT INTO public.administrators_organizations(id, docid, gid, inn, full_organization_name, organization_name, services, doc_num, doc_date, order_start_date, order_end_date, document_price, document_price_with_nds, doc_prepare_date, doc_eosdo_date, doc_sending_date, order_activity_date, doc_eosdo_num, doc_eosdo_link, order_activity_id, order_status_id) VALUES ({0}, \'{1}\', \'{2}\', \'{3}\', \'{4}\', \'{5}\', \'{6}\', \'{7}\', \'{8}\', \'{9}\', \'{10}\', \'{11}\', \'{12}\', \'{13}\', \'{14}\', \'{15}\', \'{16}\', \'{17}\', \'{18}\', {19}, {20})'.format(
-                    str(id),
+                    orgId,
                     i.get_docid(),
                     i.get_gid(),
                     i.get_inn(),
@@ -382,13 +502,10 @@ def fetchOrgDB():
                 conn.close()
                 print("MySQL connection is closed")
 
-        id += 1
 
 
 def fetchDlDB():
 
-    adminsId = 1
-    orderssId = 1
 
     for i in dls:
 
@@ -465,9 +582,20 @@ def fetchDlDB():
                                                     password='postgres', host='localhost')
                             cursor = conn.cursor()
 
+                            sql = 'SELECT MAX(id) FROM administrators_administrators'
 
+
+                            try:
+                                cursor.execute(sql)
+                                conn.commit()
+
+                                lastDLId = cursor.fetchall()
+                                lastDLId = int(re.sub("[^0-9]", "", str(lastDLId)))
+                                lastDLId += 1
+                            except Exception as e:
+                                lastDLId = 1
                             sql = 'INSERT INTO public.administrators_administrators(id, fio, e_mail, work_telephone, mobile_telephone, city, filial_name, dl_name_id) VALUES ({0}, \'{1}\', \'{2}\', \'{3}\', \'{4}\', \'{5}\', \'{6}\', {7})'.format(
-                                adminsId,
+                                lastDLId,
                                 i.get_fio(),
                                 i.get_e_mail(),
                                 i.get_work_tel(),
@@ -483,7 +611,7 @@ def fetchDlDB():
                             conn.commit()
 
                             cursor.close()
-                            adminsId += 1
+
 
 
                     except Exception as error:
@@ -518,13 +646,24 @@ def fetchDlDB():
                                 conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
                                                         password='postgres', host='localhost')
                                 cursor = conn.cursor()
+                                sql = 'SELECT MAX(id) FROM administrators_order_admin_ib'
 
+
+                                try:
+                                    cursor.execute(sql)
+                                    conn.commit()
+
+                                    lastOrgId = cursor.fetchall()
+                                    lastOrgId = int(re.sub("[^0-9]", "", str(lastOrgId)))
+                                    lastOrgId += 1
+                                except Exception as e:
+                                    lastOrgId = 1
                                 sql = 'INSERT INTO public.administrators_order_admin_ib(id, order_num, order_date, order_file, order_administrator_id, order_organization_id) VALUES ({0}, \'{1}\', \'{2}\', \'{3}\', {4}, {5})'.format(
-                                    orderssId,
+                                    lastOrgId,
                                     i.get_order_num(),
                                     i.get_order_date(),
                                     'mainapp\\admin_ib_orders\\' + str(i.get_gid()) + '.pdf',
-                                    adminsId - 1,
+                                    lastDLId,
                                     org_id
                                 )
 
@@ -534,9 +673,6 @@ def fetchDlDB():
                                 conn.commit()
 
                                 cursor.close()
-                                #adminsId += 1
-                                orderssId += 1
-
 
 
                         except Exception as error:
@@ -546,14 +682,238 @@ def fetchDlDB():
                             conn.close()
                             print("Success")
             else:
-                adminsId += 1
-                orderssId += 1
+                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
+                                        password='postgres', host='localhost')
+                cursor = conn.cursor()
 
+                cursor.execute('SELECT id FROM administrators_dlnames WHERE '
+                               '		dl_name = \'{0}\''.format(i.get_dl_name()))
+
+                records = cursor.fetchall()
+                conn.commit()
+
+                cursor.close()
+                conn.close()
+
+                try:
+                    dl_name_id = re.sub("[^0-9]", "", str(records[0]))
+                except IndexError as error:
+                    dl_name_id = 1
+
+                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
+                                        password='postgres', host='localhost')
+                cursor = conn.cursor()
+
+                cursor.execute('SELECT id FROM administrators_organizations WHERE '
+                               '			gid = \'{0}\''.format(i.get_gid()))
+
+                records = cursor.fetchall()
+                conn.commit()
+
+                cursor.close()
+                conn.close()
+                for record in records:
+
+                    try:
+                        conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
+                                                password='postgres', host='localhost')
+                        cursor = conn.cursor()
+
+                        cursor.execute(
+                            'SELECT * FROM administrators_administrators WHERE fio = \'{0}\' AND e_mail = \'{1}\''.format(
+                                i.get_fio(),
+                                i.get_e_mail()
+                            ))
+                        conn.commit()
+
+                        adminRrecords = cursor.fetchall()
+
+                        cursor.close()
+                        conn.close()
+                        if len(adminRrecords) == 0:
+                            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
+                                                    password='postgres', host='localhost')
+                            cursor = conn.cursor()
+
+                            sql = 'SELECT MAX(id) FROM administrators_administrators'
+
+                            try:
+                                cursor.execute(sql)
+                                conn.commit()
+
+                                lastDLId = cursor.fetchall()
+                                lastDLId = int(re.sub("[^0-9]", "", str(lastDLId)))
+                                lastDLId += 1
+                            except Exception as e:
+                                lastDLId = 1
+                            sql = 'INSERT INTO public.administrators_administrators(id, fio, e_mail, work_telephone, mobile_telephone, city, filial_name, dl_name_id) VALUES ({0}, \'{1}\', \'{2}\', \'{3}\', \'{4}\', \'{5}\', \'{6}\', {7})'.format(
+                                lastDLId,
+                                i.get_fio(),
+                                i.get_e_mail(),
+                                i.get_work_tel(),
+                                i.get_mob_tel(),
+                                i.get_city(),
+                                i.get_filialName(),
+                                dl_name_id
+                            )
+
+                            print(sql)
+
+                            cursor.execute(sql)
+                            conn.commit()
+
+                            cursor.close()
+                        else:
+                            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
+                                                    password='postgres', host='localhost')
+                            cursor = conn.cursor()
+
+                            adminId = adminRrecords[0][0]
+
+                            sql = 'DELETE FROM administrators_order_admin_ib WHERE order_administrator_id = {0}'.format(
+                                adminId)
+
+                            print(sql)
+                            try:
+                                cursor.execute(sql)
+                                conn.commit()
+                            except Exception as e:
+                                print("Failed to delete record into Laptop table {}".format(error))
+
+                            sql = 'DELETE FROM administrators_administrators WHERE id = {0}'.format(adminId)
+                            print(sql)
+
+                            try:
+                                cursor.execute(sql)
+                                conn.commit()
+                            except Exception as e:
+                                print("Failed to delete record into Laptop table {}".format(error))
+
+
+
+                            except Exception as e:
+                                print("Failed to delete record into Laptop table {}".format(error))
+
+                            sql = 'INSERT INTO public.administrators_administrators(id, fio, e_mail, work_telephone, mobile_telephone, city, filial_name, dl_name_id) VALUES ({0}, \'{1}\', \'{2}\', \'{3}\', \'{4}\', \'{5}\', \'{6}\', {7})'.format(
+                                adminId,
+                                i.get_fio(),
+                                i.get_e_mail(),
+                                i.get_work_tel(),
+                                i.get_mob_tel(),
+                                i.get_city(),
+                                i.get_filialName(),
+                                dl_name_id
+                            )
+
+                            print(sql)
+
+                            cursor.execute(sql)
+                            conn.commit()
+
+                            cursor.close()
+
+
+
+                    except Exception as error:
+                        print("Failed to insert record into Laptop table {}".format(error))
+
+
+                    finally:
+                        conn.close()
+                        print("Success")
+
+                        try:
+                            org_id = re.sub("[^0-9]", "", str(record))
+                        except IndexError as error:
+                            org_id = 0
+
+                        try:
+
+                            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
+                                                    password='postgres', host='localhost')
+                            cursor = conn.cursor()
+                            sql = 'SELECT * FROM administrators_order_admin_ib WHERE order_num = \'{0}\' AND order_date = \'{1}\''.format(
+                                i.get_order_num(),
+                                i.get_order_date()
+                            )
+
+                            cursor.execute(sql)
+                            conn.commit()
+
+                            orderRrecords = cursor.fetchall()
+
+                            if len(orderRrecords) == 0:
+                                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
+                                                        password='postgres', host='localhost')
+                                cursor = conn.cursor()
+                                sql = 'SELECT MAX(id) FROM administrators_order_admin_ib'
+
+                                try:
+                                    cursor.execute(sql)
+                                    conn.commit()
+
+                                    lastOrgId = cursor.fetchall()
+                                    lastOrgId = int(re.sub("[^0-9]", "", str(lastOrgId)))
+                                    lastOrgId += 1
+                                except Exception as e:
+                                    lastOrgId = 1
+                                sql = 'INSERT INTO public.administrators_order_admin_ib(id, order_num, order_date, order_file, order_administrator_id, order_organization_id) VALUES ({0}, \'{1}\', \'{2}\', \'{3}\', {4}, {5})'.format(
+                                    lastOrgId,
+                                    i.get_order_num(),
+                                    i.get_order_date(),
+                                    'mainapp\\admin_ib_orders\\' + str(i.get_gid()) + '.pdf',
+                                    adminId,
+                                    org_id
+                                )
+
+                                print(sql)
+
+                                cursor.execute(sql)
+                                conn.commit()
+
+                                cursor.close()
+
+                            else:
+                                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
+                                                        password='postgres', host='localhost')
+                                cursor = conn.cursor()
+                                orderId = orderRrecords[0][0]
+
+                                sql = 'DELETE FROM administrators_order_admin_ib WHERE id = {0}'.format(orderId)
+                                print(sql)
+                                try:
+                                    cursor.execute(sql)
+                                    conn.commit()
+
+                                except Exception as e:
+                                    print("Failed to delete from administrators_order_admin_ib table {}".format(error))
+
+                                sql = 'INSERT INTO public.administrators_order_admin_ib(id, order_num, order_date, order_file, order_administrator_id, order_organization_id) VALUES ({0}, \'{1}\', \'{2}\', \'{3}\', {4}, {5})'.format(
+                                    orderId,
+                                    i.get_order_num(),
+                                    i.get_order_date(),
+                                    'mainapp\\admin_ib_orders\\' + str(i.get_gid()) + '.pdf',
+                                    adminId,
+                                    org_id
+                                )
+
+                                print(sql)
+
+                                cursor.execute(sql)
+                                conn.commit()
+
+                                cursor.close()
+
+
+                        except Exception as error:
+                            print("Failed to insert record into Laptop table {}".format(error))
+
+                        finally:
+                            conn.close()
+                            print("Success")
 
 def fethDicts():
 
-    activityId = 2
-    statusId = 2
     orderActivities = []
     orderStatuses = []
     for org in organizations:
@@ -609,8 +969,18 @@ def fethDicts():
             orderActivitiesBd = cursor.fetchall()
 
             if len(orderActivitiesBd) == 0:
+                sql = 'SELECT MAX(id) FROM administrators_orderactivities'
+
+
+                cursor.execute(sql)
+                conn.commit()
+
+                lastId = cursor.fetchall()
+                lastId = int(re.sub("[^0-9]", "", str(lastId)))
+                lastId += 1
+
                 sql = 'INSERT INTO public.administrators_orderactivities(id, activity_name) VALUES ({0}, \'{1}\')'.format(
-                    str(activityId),
+                    lastId,
                     orderActivity
                 )
 
@@ -619,7 +989,7 @@ def fethDicts():
                 cursor.execute(sql)
                 conn.commit()
 
-                activityId += 1
+
 
 
 
@@ -633,12 +1003,21 @@ def fethDicts():
     conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
                             password='postgres', host='localhost')
     cursor = conn.cursor()
-    sql = 'INSERT INTO public.administrators_orderstatuses(id, status_name) VALUES (1, \'Не указан\')'
-
-    print(sql)
+    sql = 'SELECT * FROM administrators_orderstatuses WHERE status_name = \'{0}\''.format(
+        'Не указан'
+    )
 
     cursor.execute(sql)
     conn.commit()
+
+    orderStatusesBd = cursor.fetchall()
+    if len(orderStatusesBd) == 0:
+        sql = 'INSERT INTO public.administrators_orderstatuses(id, status_name) VALUES (1, \'Не указан\')'
+
+        print(sql)
+
+        cursor.execute(sql)
+        conn.commit()
 
     for orderStatus in orderStatuses:
         try:
@@ -657,8 +1036,17 @@ def fethDicts():
             orderStatusesBd = cursor.fetchall()
 
             if len(orderStatusesBd) == 0:
+                sql = 'SELECT MAX(id) FROM administrators_orderstatuses'
+
+
+                cursor.execute(sql)
+                conn.commit()
+
+                lastId = cursor.fetchall()
+                lastId = int(re.sub("[^0-9]", "", str(lastId)))
+                lastId += 1
                 sql = 'INSERT INTO public.administrators_orderstatuses(id, status_name) VALUES ({0}, \'{1}\')'.format(
-                    str(statusId),
+                    lastId,
                     orderStatus
                 )
 
@@ -667,7 +1055,7 @@ def fethDicts():
                 cursor.execute(sql)
                 conn.commit()
 
-                statusId += 1
+
 
         except Exception as error:
             print("Failed to insert record into Laptop table {}".format(error))
@@ -702,8 +1090,17 @@ def fethDicts():
             dlnames = cursor.fetchall()
 
             if len(dlnames) == 0:
+                sql = 'SELECT MAX(id) FROM administrators_dlnames'
+
+
+                cursor.execute(sql)
+                conn.commit()
+
+                lastId = cursor.fetchall()
+                lastId = int(re.sub("[^0-9]", "", str(lastId)))
+                lastId += 1
                 sql = 'INSERT INTO public.administrators_dlnames(id, dl_name) VALUES ({0}, \'{1}\')'.format(
-                    str(dlNameId),
+                    lastId,
                     dl
                 )
 
@@ -725,8 +1122,8 @@ def fethDicts():
 
 readOrderBase()
 readDlBase()
-fethDicts()
-fetchOrgDB()
+#fethDicts()
+#fetchOrgDB()
 fetchDlDB()
 
 
