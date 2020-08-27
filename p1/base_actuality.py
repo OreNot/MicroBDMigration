@@ -246,20 +246,21 @@ def readOrderBase():
         except AttributeError:
             doc_eosdo_link = ""
 
-        newOrganization = Organization(docid, gid, inn, full_organization_name, organization_name, services, doc_num, doc_date, order_start_date,
-                 order_end_date,
-                 order_status,
-                 order_activity,
-                 document_price,
-                 document_price_with_nds,
-                 doc_prepare_date,
-                 doc_eosdo_date,
-                 doc_sending_date,
-                 order_activity_date,
-                 doc_eosdo_num,
-                 doc_eosdo_link)
+        if str(ws["E" + str(row)].value) == "ЦКЗ":
+            newOrganization = Organization(docid, gid, inn, full_organization_name, organization_name, services, doc_num, doc_date, order_start_date,
+                     order_end_date,
+                     order_status,
+                     order_activity,
+                     document_price,
+                     document_price_with_nds,
+                     doc_prepare_date,
+                     doc_eosdo_date,
+                     doc_sending_date,
+                     order_activity_date,
+                     doc_eosdo_num,
+                     doc_eosdo_link)
 
-        organizations.append(newOrganization)
+            organizations.append(newOrganization)
 
 
 def readDlBase():
@@ -1122,8 +1123,8 @@ def fethDicts():
 
 readOrderBase()
 readDlBase()
-#fethDicts()
-#fetchOrgDB()
+fethDicts()
+fetchOrgDB()
 fetchDlDB()
 
 
