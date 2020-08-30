@@ -1,15 +1,54 @@
-
 from openpyxl import load_workbook
-
 import psycopg2
 import re
-
 
 orderBaseFile = 'C:\\microservices\\order_base.xlsm'
 dlWithoutGen23BaseFile = 'C:\\microservices\\dl_without_gen23.xlsx'
 organizations = []
 dls = []
 
+db_config = {'database':'OKZ_DB',
+           'user':'root',
+           'password':'test',
+           'host':'127.0.0.1'}
+
+conn = psycopg2.connect(**db_config)
+cursor = conn.cursor()
+
+try:
+    cursor.execute('''CREATE TABLE Organizations
+    (docid INT PRIMARY KEY NOT NULL,
+    gid INT,
+    inn INT, 
+    full_organization_name CHAR (512),
+    organization_name CHAR (255),
+    services CHAR (1024),
+    doc_num CHAR (1024),
+    doc_date DATE,
+    order_start_date DATE,
+    order_end_date DATE,
+    order_status CHAR (255),
+    order_activity CHAR (255),
+    document_price CHAR (255),
+    document_price_with_nds CHAR (255),
+    doc_prepare_date DATE,
+    doc_eosdo_date DATE,
+    doc_sending_date DATE,
+    order_activity_date DATE,
+    doc_eosdo_num CHAR (255),
+    doc_eosdo_link CHAR (512));''')
+
+except psycopg2.errors.DuplicateTable:
+    print ('База данных существует')
+
+conn.commit()
+conn.close()
+
+def find_coll(ws, j, name_coll):
+    for col in range (1, ws.max_column):
+        if name_coll == ws.cell(row = j, column = col).value:
+            return (col)
+    print ('{} не найден'. format (name_coll))
 
 
 class Organization:
@@ -181,84 +220,103 @@ def readOrderBase():
     wb = load_workbook(orderBaseFile, data_only=True)
 
     ws = wb['Договоры']
-    j = 1
     for i in range (1, ws.max_row):
         cell = ws["A" + str(i)]
         if "ID документа" in str(cell.value):
+            j = i
             break
-        else:
-            j += 1
 
-    j += 1
+    gid_col = find_coll(ws, j , 'GID')
+    inn_col = find_coll(ws, j , 'ИНН')
+    full_organization_name__col = find_coll(ws, j , 'Полное наименование контрагента')
+    organization_name_col = find_coll(ws, j , 'Краткое наименование контрагента')
+    services_col = find_coll(ws, j , 'Предмет документа')
+    doc_num_col = find_coll(ws, j , 'Номер договора')
+    doc_date_col = find_coll(ws, j , 'Дата договора')
+    order_start_date_col = find_coll(ws, j , 'Дата начала действия документа')
+    order_end_date_col = find_coll(ws, j , 'Дата окончания действия документа')
+    order_status_col = find_coll(ws, j , 'Статус документа')
+    order_activity_col = find_coll(ws, j , 'Активность документа  (для актирования)')
+    document_price_col = find_coll(ws, j , 'Общая стоимость документа без НДС, руб.')
+    document_price_with_nds_col = find_coll(ws, j , 'Общая стоимость документа с НДС, руб.')
+    doc_prepare_date_col = find_coll(ws, j , 'Дата заявки на подготовку документа')
+    doc_eosdo_date_col = find_coll(ws, j , 'Дата загрузки в ЕОСДО')
+    doc_sending_date_col = find_coll(ws, j , 'Дата отправки контрагенту')
+    order_activity_date_col = find_coll(ws, j , 'Дата активации договора')
+    doc_eosdo_num_col = find_coll(ws, j , 'Номер документа в ЕОСДО')
+    doc_eosdo_link_col = find_coll(ws, j , 'Ссылка в ЕОСДО')
+    unit_order_col = find_coll(ws, j , 'Вид договора')
+
+
 
     for row in range(j, ws.max_row):
+        docid = ws.cell(row = j, column = 1).value
+        gid = ws.cell(row = j, column = gid_col).value
+        inn = ws.cell(row = j, column = inn_col).value
+        full_organization_name = ws.cell(row = j, column = full_organization_name__col).value
+        organization_name = ws.cell(row = j, column = organization_name_col).value
+        services = ws.cell(row = j, column = services_col).value
+        doc_num = ws.cell(row = j, column = doc_num_col).value
 
-        docid = ws["A" + str(row)].value
-        gid = ws["F" + str(row)].value
-        inn = ws["G" + str(row)].value
-        full_organization_name = ws["I" + str(row)].value
-        organization_name = ws["J" + str(row)].value
-        services = ws["Q" + str(row)].value
-        doc_num = ws["L" + str(row)].value
-
-        if str(ws["M" + str(row)].value) == "None" or isinstance(ws["M" + str(row)].value, str):
+        if str(ws.cell(row = j, column = doc_date_col).value) == "None" or isinstance(ws.cell(row = j, column = doc_date_col).value, str):
             doc_date = '2030-01-01 00:00:00'
         else:
-            doc_date = ws["M" + str(row)].value
+            doc_date = ws.cell(row = j, column = doc_date_col).value
 
-
-        if str(ws["R" + str(row)].value) == "None" or isinstance(ws["R" + str(row)].value, str):
+        if str(ws.cell(row = j, column = order_start_date_col).value) == "None" or isinstance(ws.cell(row = j, column = order_start_date_col).value, str):
             order_start_date = '2030-01-01 00:00:00'
         else:
-            order_start_date = ws["R" + str(row)].value
+            order_start_date = ws.cell(row = j, column = order_start_date_col).value
 
-        if str(ws["S" + str(row)].value) == "None" or isinstance(ws["S" + str(row)].value, str):
+        if str(ws.cell(row = j, column = order_end_date_col).value) == "None" or isinstance(ws.cell(row = j, column = order_end_date_col).value, str):
             order_end_date = '2030-01-01 00:00:00'
         else:
-            order_end_date = ws["S" + str(row)].value
+            order_end_date = ws.cell(row = j, column = order_end_date_col).value
 
-        order_status = ws["U" + str(row)].value
-        order_activity = ws["V" + str(row)].value
-        document_price = ws["AD" + str(row)].value
-        document_price_with_nds = ws["AE" + str(row)].value
-        if str(ws["AG" + str(row)].value) == "None" or isinstance(ws["AG" + str(row)].value, str):
+        order_status = ws.cell(row = j, column = order_status_col).value
+        order_activity = ws.cell(row = j, column = order_activity_col).value
+        document_price = ws.cell(row = j, column = document_price_col).value
+        document_price_with_nds = ws.cell(row = j, column = document_price_with_nds_col).value
+
+        if str(ws.cell(row = j, column = doc_prepare_date_col).value) == "None" or isinstance(ws.cell(row = j, column = doc_prepare_date_col).value, str):
             doc_prepare_date = '2030-01-01 00:00:00'
         else:
-            doc_prepare_date = ws["AG" + str(row)].value
+            doc_prepare_date = ws.cell(row = j, column = doc_prepare_date_col).value
 
-        if str(ws["AH" + str(row)].value) == "None" or isinstance(ws["AH" + str(row)].value, str):
+        if str(ws.cell(row = j, column = doc_eosdo_date_col).value) == "None" or isinstance(ws.cell(row = j, column = doc_eosdo_date_col).value, str):
             doc_eosdo_date = '2030-01-01 00:00:00'
         else:
-            doc_eosdo_date = ws["AH" + str(row)].value
+            doc_eosdo_date = ws.cell(row = j, column = doc_eosdo_date_col).value
 
-        if str(ws["AI" + str(row)].value) == "None" or isinstance(ws["AI" + str(row)].value, str):
+        if str(ws.cell(row = j, column = doc_sending_date_col).value) == "None" or isinstance(ws.cell(row = j, column = doc_sending_date_col).value, str):
             doc_sending_date = '2030-01-01 00:00:00'
         else:
-            doc_sending_date = ws["AI" + str(row)].value
+            doc_sending_date = ws.cell(row = j, column = doc_sending_date_col).value
 
-        if str(ws["AI" + str(row)].value) == "None" or isinstance(ws["AI" + str(row)].value, str):
+        if str(ws.cell(row = j, column = order_activity_date_col).value) == "None" or isinstance(ws.cell(row = j, column = order_activity_date_col).value, str):
             order_activity_date = '2030-01-01 00:00:00'
         else:
-            order_activity_date = ws["AI" + str(row)].value
-        doc_eosdo_num = ws["AO" + str(row)].value
+            order_activity_date = ws.cell(row = j, column = order_activity_date_col).value
+
+        doc_eosdo_num = ws.cell(row = j, column = doc_eosdo_num_col).value
         try:
-            doc_eosdo_link = ws["AP" + str(row)].hyperlink.target
+            doc_eosdo_link = ws.cell(row = j, column = doc_eosdo_link_col).hyperlink.target
         except AttributeError:
             doc_eosdo_link = ""
 
-        if str(ws["E" + str(row)].value) == "ЦКЗ":
+        if str(ws.cell(row = j, column = unit_order_col).value) == "ЦКЗ":
             newOrganization = Organization(docid, gid, inn, full_organization_name, organization_name, services, doc_num, doc_date, order_start_date,
-                     order_end_date,
-                     order_status,
-                     order_activity,
-                     document_price,
-                     document_price_with_nds,
-                     doc_prepare_date,
-                     doc_eosdo_date,
-                     doc_sending_date,
-                     order_activity_date,
-                     doc_eosdo_num,
-                     doc_eosdo_link)
+                        order_end_date,
+                        order_status,
+                        order_activity,
+                        document_price,
+                        document_price_with_nds,
+                        doc_prepare_date,
+                        doc_eosdo_date,
+                        doc_sending_date,
+                        order_activity_date,
+                        doc_eosdo_num,
+                        doc_eosdo_link)
 
             organizations.append(newOrganization)
 
@@ -289,8 +347,7 @@ def fetchOrgDB():
 
     for i in organizations:
 
-        conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                password='postgres', host='localhost')
+        conn = psycopg2.connect(**db_config)
         cursor = conn.cursor()
 
         cursor.execute('SELECT * FROM administrators_organizations WHERE docid = \'{1}\' AND gid = \'{0}\' AND inn = \'{2}\''.format(
@@ -308,8 +365,7 @@ def fetchOrgDB():
         if len(orgRecords) == 0:
 
 
-            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                    password='postgres', host='localhost')
+            conn = psycopg2.connect(**db_config)
             cursor = conn.cursor()
 
             cursor.execute('SELECT id FROM administrators_orderstatuses WHERE '
@@ -322,8 +378,7 @@ def fetchOrgDB():
 
             idorderstatus = re.sub("[^0-9]", "", str(records[0]))
 
-            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                    password='postgres', host='localhost')
+            conn = psycopg2.connect(**db_config)
             cursor = conn.cursor()
 
             cursor.execute('SELECT id FROM administrators_orderactivities WHERE '
@@ -341,8 +396,7 @@ def fetchOrgDB():
                 idorderactivity = 1
 
             try:
-                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                        password='postgres', host='localhost')
+                conn = psycopg2.connect(**db_config)
                 cursor = conn.cursor()
                 sql = 'SELECT MAX(id) FROM administrators_organizations'
 
@@ -403,8 +457,7 @@ def fetchOrgDB():
                 print("MySQL connection is closed")
 
         else:
-            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                    password='postgres', host='localhost')
+            conn = psycopg2.connect(**db_config)
             cursor = conn.cursor()
 
             cursor.execute('SELECT id FROM administrators_orderstatuses WHERE '
@@ -417,8 +470,7 @@ def fetchOrgDB():
 
             idorderstatus = re.sub("[^0-9]", "", str(records[0]))
 
-            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                    password='postgres', host='localhost')
+            conn = psycopg2.connect(**db_config)
             cursor = conn.cursor()
 
             cursor.execute('SELECT id FROM administrators_orderactivities WHERE '
@@ -436,8 +488,7 @@ def fetchOrgDB():
                 idorderactivity = 1
 
             try:
-                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                        password='postgres', host='localhost')
+                conn = psycopg2.connect(**db_config)
                 cursor = conn.cursor()
 
                 orgId = orgRecords[0][0]
@@ -512,8 +563,7 @@ def fetchDlDB():
 
 
         if str(i.get_gid()) != "None":
-            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                    password='postgres', host='localhost')
+            conn = psycopg2.connect(**db_config)
             cursor = conn.cursor()
 
             cursor.execute(
@@ -530,8 +580,7 @@ def fetchDlDB():
 
 
             if len(adminRrecords) == 0:
-                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                        password='postgres', host='localhost')
+                conn = psycopg2.connect(**db_config)
                 cursor = conn.cursor()
 
                 cursor.execute('SELECT id FROM administrators_dlnames WHERE '
@@ -548,8 +597,7 @@ def fetchDlDB():
                 except IndexError as error:
                     dl_name_id = 1
 
-                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                        password='postgres', host='localhost')
+                conn = psycopg2.connect(**db_config)
                 cursor = conn.cursor()
 
                 cursor.execute('SELECT id FROM administrators_organizations WHERE '
@@ -563,8 +611,7 @@ def fetchDlDB():
                 for record in records:
 
                     try:
-                        conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                                password='postgres', host='localhost')
+                        conn = psycopg2.connect(**db_config)
                         cursor = conn.cursor()
 
                         cursor.execute(
@@ -579,8 +626,7 @@ def fetchDlDB():
                         cursor.close()
                         conn.close()
                         if len(adminRrecords) == 0:
-                            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                                    password='postgres', host='localhost')
+                            conn = psycopg2.connect(**db_config)
                             cursor = conn.cursor()
 
                             sql = 'SELECT MAX(id) FROM administrators_administrators'
@@ -630,8 +676,7 @@ def fetchDlDB():
 
                         try:
 
-                            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                                    password='postgres', host='localhost')
+                            conn = psycopg2.connect(**db_config)
                             cursor = conn.cursor()
                             sql = 'SELECT * FROM administrators_order_admin_ib WHERE order_num = \'{0}\' AND order_date = \'{1}\''.format(
                                 i.get_order_num(),
@@ -644,8 +689,7 @@ def fetchDlDB():
                             orderRrecords = cursor.fetchall()
 
                             if len(orderRrecords) == 0:
-                                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                                        password='postgres', host='localhost')
+                                conn = psycopg2.connect(**db_config)
                                 cursor = conn.cursor()
                                 sql = 'SELECT MAX(id) FROM administrators_order_admin_ib'
 
@@ -683,8 +727,7 @@ def fetchDlDB():
                             conn.close()
                             print("Success")
             else:
-                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                        password='postgres', host='localhost')
+                conn = psycopg2.connect(**db_config)
                 cursor = conn.cursor()
 
                 cursor.execute('SELECT id FROM administrators_dlnames WHERE '
@@ -701,8 +744,7 @@ def fetchDlDB():
                 except IndexError as error:
                     dl_name_id = 1
 
-                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                        password='postgres', host='localhost')
+                conn = psycopg2.connect(**db_config)
                 cursor = conn.cursor()
 
                 cursor.execute('SELECT id FROM administrators_organizations WHERE '
@@ -716,8 +758,7 @@ def fetchDlDB():
                 for record in records:
 
                     try:
-                        conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                                password='postgres', host='localhost')
+                        conn = psycopg2.connect(**db_config)
                         cursor = conn.cursor()
 
                         cursor.execute(
@@ -732,8 +773,7 @@ def fetchDlDB():
                         cursor.close()
                         conn.close()
                         if len(adminRrecords) == 0:
-                            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                                    password='postgres', host='localhost')
+                            conn = psycopg2.connect(**db_config)
                             cursor = conn.cursor()
 
                             sql = 'SELECT MAX(id) FROM administrators_administrators'
@@ -765,8 +805,7 @@ def fetchDlDB():
 
                             cursor.close()
                         else:
-                            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                                    password='postgres', host='localhost')
+                            conn = psycopg2.connect(**db_config)
                             cursor = conn.cursor()
 
                             adminId = adminRrecords[0][0]
@@ -830,8 +869,7 @@ def fetchDlDB():
 
                         try:
 
-                            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                                    password='postgres', host='localhost')
+                            conn = psycopg2.connect(**db_config)
                             cursor = conn.cursor()
                             sql = 'SELECT * FROM administrators_order_admin_ib WHERE order_num = \'{0}\' AND order_date = \'{1}\''.format(
                                 i.get_order_num(),
@@ -844,8 +882,7 @@ def fetchDlDB():
                             orderRrecords = cursor.fetchall()
 
                             if len(orderRrecords) == 0:
-                                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                                        password='postgres', host='localhost')
+                                conn = psycopg2.connect(**db_config)
                                 cursor = conn.cursor()
                                 sql = 'SELECT MAX(id) FROM administrators_order_admin_ib'
 
@@ -875,8 +912,7 @@ def fetchDlDB():
                                 cursor.close()
 
                             else:
-                                conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                                        password='postgres', host='localhost')
+                                conn = psycopg2.connect(**db_config)
                                 cursor = conn.cursor()
                                 orderId = orderRrecords[0][0]
 
@@ -932,8 +968,7 @@ def fethDicts():
                 continue
 
 
-    conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                            password='postgres', host='localhost')
+    conn = psycopg2.connect(**db_config)
     cursor = conn.cursor()
 
     sql = 'SELECT * FROM administrators_orderactivities WHERE activity_name = \'{0}\''.format(
@@ -957,8 +992,7 @@ def fethDicts():
     for orderActivity in orderActivities:
         try:
 
-            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                    password='postgres', host='localhost')
+            conn = psycopg2.connect(**db_config)
             cursor = conn.cursor()
             sql = 'SELECT * FROM administrators_orderactivities WHERE activity_name = \'{0}\''.format(
                 orderActivity
@@ -1001,8 +1035,7 @@ def fethDicts():
             conn.close()
             print("Success")
 
-    conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                            password='postgres', host='localhost')
+    conn = psycopg2.connect(**db_config)
     cursor = conn.cursor()
     sql = 'SELECT * FROM administrators_orderstatuses WHERE status_name = \'{0}\''.format(
         'Не указан'
@@ -1024,8 +1057,7 @@ def fethDicts():
         try:
 
 
-            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                    password='postgres', host='localhost')
+            conn = psycopg2.connect(**db_config)
             cursor = conn.cursor()
             sql = 'SELECT * FROM administrators_orderstatuses WHERE status_name = \'{0}\''.format(
                 orderStatus
@@ -1078,8 +1110,7 @@ def fethDicts():
     for dl in dlList:
         try:
 
-            conn = psycopg2.connect(dbname='OKZ_DB', user='postgres',
-                                        password='postgres', host='localhost')
+            conn = psycopg2.connect(**db_config)
             cursor = conn.cursor()
             sql = 'SELECT * FROM administrators_dlnames WHERE dl_name = \'{0}\''.format(
                    dl
