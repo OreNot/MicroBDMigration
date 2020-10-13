@@ -1,8 +1,9 @@
-from openpyxl import load_workbook
 import psycopg2
+from openpyxl import load_workbook
 from tqdm import tqdm
+import time
 
-orderSkziFile = 'C:\\microservices\\skzi_base — new.xlsx'
+orderSkziFile = 'C:\\microservices\\skzi_base — new.xlsx' 
 skzi = []
 organization_mas = []
 
@@ -158,7 +159,9 @@ def readSkzis():
     cursor = conn.cursor()
 
 
-    for row_num in range (2, ws.max_row):
+    for row_num in tqdm(range (2, ws.max_row)):
+
+        time.sleep(0.02)
 
         ais_id = readSkzis_ais(row_num,ws)
         skzi_type_id = readSkzis_skzitype(row_num,ws)
